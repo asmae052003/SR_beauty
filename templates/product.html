@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.title }}{% endblock %}
+
+{% block content %}
+<div class="row mt-5 align-items-center">
+    <!-- Breadcrumb -->
+    <div class="col-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ product.title|truncate(30) }}</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Product Image -->
+    <div class="col-md-6 mb-4 text-center">
+        <div class="bg-white p-4 rounded-3 shadow-sm">
+            {% if product.image_url and product.image_url|length > 10 %}
+            <img src="{{ product.image_url }}" class="img-fluid" style="max-height: 500px;" alt="{{ product.title }}">
+            {% else %}
+            <img src="https://via.placeholder.com/500x500?text=No+Image" class="img-fluid" alt="No Image">
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Product Details -->
+    <div class="col-md-6">
+        <span class="badge bg-secondary mb-2">{{ product.brand }}</span>
+        <h1 class="fw-bold mb-3">{{ product.title }}</h1>
+        <div class="mb-4">
+            <span class="h4 me-3 text-primary">{{ product.price if product.price else 'Price varies' }}</span>
+            {% if product.avg_rating %}
+            <span class="text-warning">
+                {% set rating = product.avg_rating|float %}
+                {% for i in range(5) %}
+                {% if i < rating %} <i class="fas fa-star"></i>
+                    {% else %} <i class="far fa-star"></i>
+                    {% endif %}
+                    {% endfor %}
+                    {% if product.popularity %}
+                    <span class="text-muted ms-2">({{ product.popularity }} ratings)</span>
+                    {% endif %}
+            </span>
+            {% endif %}
+        </div>
+
+        <p class="lead text-muted mb-4">
+            Category: {{ product.main_cat }}
+        </p>
+        <p class="lead mb-4">Rating: {{ product.avg_rating }} ⭐</p>
+
+        <div class="d-grid gap-2 d-md-block">
+            <button class="btn btn-primary btn-lg px-4" type="button">Buy Now</button>
+            <a href="{{ url_for('add_to_cart', asin=product.asin) }}" class="btn btn-outline-dark btn-lg px-4">Add to
+                Cart</a>
+            <a href="{{ url_for('add_to_wishlist', asin=product.asin) }}" class="btn btn-outline-danger btn-lg px-4">Add
+                to Wishlist</a>
+        </div>
+
+        <div class="mt-5 p-3 bg-light rounded border">
+            <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Use recommendations to find similar
+                items.</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h3 class="mb-4">Customer Reviews</h3>
+        <hr>
+    </div>
+
+    <!-- Review Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Write a Review</h5>
+                {% if current_user.is_authenticated %}
+                <form action="{{ url_for('add_review', asin=product.asin) }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="rating-input">
+                            <select class="form-select" name="rating" required>
+                                <option value="" selected disabled>Select Stars</option>
+                                <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                                <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
+                                <option value="3">⭐⭐⭐ (3 - Average)</option>
+                                <option value="2">⭐⭐ (2 - Poor)</option>
+                                <option value="1">⭐ (1 - Terrible)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comment</label>
+                        <textarea class="form-control" name="comment" rows="3"
+                            placeholder="Share your thoughts..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                </form>
+                {% else %}
+                <p class="text-muted">Please <a href="{{ url_for('login') }}">login</a> to leave a review.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div class="col-md-8">
+        {% if reviews %}
+        {% for review in reviews %}
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong class="me-2">{{ review.user.username }}</strong>
+                        <span class="text-warning">
+                            {% for i in range(review.rating) %}<i class="fas fa-star"></i>{% endfor %}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ review.timestamp.strftime('%Y-%m-%d') }}</small>
+                </div>
+                <p class="mt-2 text-secondary">{{ review.comment }}</p>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-light border">
+            No reviews yet. Be the first to review this product!
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

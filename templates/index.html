@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row hero-section align-items-center">
+    <div class="col-md-6 ps-md-5">
+        <h1 class="display-4 fw-bold mb-3" style="color: var(--secondary-color);">Discover Your Beauty</h1>
+        <p class="lead mb-4 text-muted">Personalized recommendations driven by AI. Find the perfect products for your
+            unique style.</p>
+        {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 me-2">Get Started</a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg px-4">Login</a>
+        {% else %}
+        <a href="{{ url_for('recommend') }}" class="btn btn-primary btn-lg px-4">See My Picks</a>
+        {% endif %}
+    </div>
+    <div class="col-md-6 text-center">
+        <img src="{{ url_for('static', filename='descarga-4.png') }}" alt="Beauty Products"
+            class="img-fluid rounded-circle shadow-lg" style="max-height: 400px; width: 400px; object-fit: cover;">
+    </div>
+</div>
+
+<!-- Recommendations Section -->
+{% if recommendations %}
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Recommended For You</h2>
+        <hr class="w-25 mx-auto mb-5">
+    </div>
+    {% for product in recommendations %}
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm border-0 product-card">
+            <div class="position-relative overflow-hidden">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.title }}">
+                {% else %}
+                <img src="https://via.placeholder.com/300x300?text=No+Image" class="card-img-top" alt="No Image">
+                {% endif %}
+                <div class="card-overlay d-flex align-items-center justify-content-center">
+                    <a href="{{ url_for('product_detail', asin=product.asin) }}"
+                        class="btn btn-light rounded-pill px-4">View</a>
+                </div>
+            </div>
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted text-uppercase small">{{ product.brand if product.brand else
+                    'Brand' }}</h6>
+                <h5 class="card-title text-truncate">{{ product.title }}</h5>
+                <a href="{{ url_for('product_detail', asin=product.asin) }}"
+                    class="btn btn-outline-dark btn-sm mt-2 rounded-pill w-100">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Trending Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Trending Now</h2>
+        <hr class="w-25 mx-auto mb-5">
+    </div>
+    {% for product in products %}
+    <div class="col-6 col-md-4 col-lg-3 mb-4">
+        <div class="card card-product h-100">
+            {% if product.image_url and product.image_url|length > 10 %}
+            <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.title }}">
+            {% else %}
+            <img src="https://via.placeholder.com/300x300?text=No+Image" class="card-img-top" alt="No Image">
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">{{ product.brand }}</small>
+                <h5 class="card-title text-truncate" title="{{ product.title }}">{{ product.title }}</h5>
+                <div class="mt-auto pt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        {% if product.avg_rating %}
+                        <span class="badge bg-light text-dark border">
+                            <i class="fas fa-star text-warning me-1"></i>{{ "%.1f"|format(product.avg_rating|float) }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('product_detail', asin=product.asin) }}"
+                        class="btn btn-sm btn-outline-primary w-100">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <p class="text-muted">No products found.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

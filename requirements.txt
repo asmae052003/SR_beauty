@@ -1,0 +1,11 @@
+flask
+flask-sqlalchemy
+flask-login
+flask-bcrypt
+pymysql
+joblib
+scipy
+pandas
+numpy
+greenlet
+paramiko
