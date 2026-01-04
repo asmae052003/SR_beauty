@@ -185,46 +185,76 @@ class Recommender:
 
     def recommend_from_history(self, asins, k=10):
         """
-        Generate recommendations by averaging the vectors of viewed items.
-        simulating a "user vector" from their recent history.
+        Hybrid approach:
+        1. Try find similar items via ALS item factors (Cosine Similarity).
+        2. If that fails (items not in model), fallback to Category-based random.
         """
-        valid_indices = []
-        for asin in asins:
-            if asin in self.item_encoder.classes_:
-                idx = self.item_encoder.transform([asin])[0]
-                valid_indices.append(idx)
+        print(f"Finding similar items for: {asins}")
         
-        if not valid_indices:
-            print("No valid ALS indices for inputs. Switching to Content-Based Fallback.")
-            return self.recommend_by_category(asins, k=k)
-
-        # Get factors for these items
-        # shape: (num_viewed, n_factors)
-        viewed_factors = self.als_model.item_factors[valid_indices]
-        
-        # Average them to get a temporary user profile
-        # shape: (n_factors,)
-        user_profile = np.mean(viewed_factors, axis=0)
-        
-        # USE COSINE SIMILARITY to avoid Popularity Bias (Magnitude Bias)
-        # Normalize user profile
-        from sklearn.preprocessing import normalize
-        user_profile_norm = normalize(user_profile.reshape(1, -1), axis=1).flatten()
-        
-        # Normalize item factors (all)
-        item_factors_norm = normalize(self.als_model.item_factors, axis=1)
-        
-        # Calculate scores (Cosine Similarity)
-        scores = item_factors_norm.dot(user_profile_norm)
-        
-        # Filter out the items they already viewed
-        scores[valid_indices] = -np.inf
-        
-        # Top K
-        top_indices = np.argsort(scores)[::-1][:k]
-        top_asins = self.item_encoder.inverse_transform(top_indices.astype(int))
-        
-        return self.get_product_details(top_asins)
+        # A. Item-Item Collaborative Filtering (Vector Similarity)
+        similar_products = []
+        try:
+            # 1. Identify valid item indices
+            valid_indices = []
+            for asin in asins:
+                if asin in self.item_encoder.classes_:
+                    idx = self.item_encoder.transform([asin])[0]
+                    valid_indices.append(idx)
+            
+            if valid_indices:
+                # 2. Get vectors
+                item_factors = self.als_model.item_factors
+                target_vectors = item_factors[valid_indices] # (m, factors)
+                
+                # 3. Compute centroid (average user interest)
+                from sklearn.preprocessing import normalize
+                user_profile = np.mean(target_vectors, axis=0)
+                user_profile_norm = normalize(user_profile.reshape(1, -1), axis=1).flatten()
+                
+                # Normalize item factors
+                item_factors_norm = normalize(item_factors, axis=1)
+                
+                # Compute scores
+                scores = item_factors_norm.dot(user_profile_norm)
+                
+                # Mask input items
+                scores[valid_indices] = -np.inf
+                
+                # Top K
+                top_indices = np.argsort(scores)[::-1][:k]
+                top_asins = self.item_encoder.inverse_transform(top_indices.astype(int))
+                
+                similar_products = self.get_product_details(top_asins)
+                print(f"Found {len(similar_products)} similar items via ALS.")
+        except Exception as e:
+            print(f"Item-Item CF failed: {e}")
+            import traceback
+            traceback.print_exc()
+            
+        # B. Fallback: Category Based if CF returned too few
+        if len(similar_products) < k:
+            print("Not enough CF results, filling with Category items.")
+            # Find category of most recent item
+            last_asin = asins[0]
+            category = None
+            if last_asin in self.meta_df.index:
+                category = self.meta_df.loc[last_asin, 'main_cat']
+            
+            if category and category in self.category_map:
+                cat_candidates = self.category_map[category]
+                current_ids = {p['asin'] for p in similar_products}
+                import random
+                attempts = 0
+                while len(similar_products) < k and attempts < 50:
+                    cand = random.choice(cat_candidates)
+                    if cand not in current_ids and cand not in asins:
+                        details = self.get_product_details([cand])
+                        if details:
+                            similar_products.extend(details)
+                            current_ids.add(cand)
+                    attempts += 1
+                    
+        return similar_products[:k]
 
     def get_cold_start_items(self, k=10):
         """Return popular/recent items."""
