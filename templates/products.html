@@ -5,6 +5,31 @@
     <div class="col-12">
         <h2 class="text-center mb-4">Shop All Products</h2>
         <hr class="w-25 mx-auto mb-5">
+        
+        <!-- Search & Filter Form -->
+        <form method="GET" action="{{ url_for('products') }}" class="mb-5">
+            <div class="row justify-content-center">
+                <div class="col-md-4 mb-3">
+                    <input type="text" name="q" class="form-control rounded-pill" placeholder="Search products..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select name="category" class="form-select rounded-pill">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill">Filter</button>
+                </div>
+                {% if search_query or current_category %}
+                <div class="col-12 text-center mt-2">
+                     <a href="{{ url_for('products') }}" class="text-muted small text-decoration-none">Clear Filters</a>
+                </div>
+                {% endif %}
+            </div>
+        </form>
     </div>
 
     {% for product in products.items %}
@@ -40,7 +65,7 @@
             <ul class="pagination">
                 {% if products.has_prev %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('products', page=products.prev_num) }}" aria-label="Previous">
+                    <a class="page-link" href="{{ url_for('products', page=products.prev_num, q=search_query, category=current_category) }}" aria-label="Previous">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
@@ -53,7 +78,7 @@
                 {% if products.page == page_num %}
                 <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
                 {% else %}
-                <li class="page-item"><a class="page-link" href="{{ url_for('products', page=page_num) }}">{{ page_num
+                <li class="page-item"><a class="page-link" href="{{ url_for('products', page=page_num, q=search_query, category=current_category) }}">{{ page_num
                         }}</a></li>
                 {% endif %}
                 {% else %}
@@ -63,7 +88,7 @@
 
                 {% if products.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="{{ url_for('products', page=products.next_num) }}" aria-label="Next">
+                    <a class="page-link" href="{{ url_for('products', page=products.next_num, q=search_query, category=current_category) }}" aria-label="Next">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>

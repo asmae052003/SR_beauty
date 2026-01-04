@@ -116,9 +116,25 @@ def recommend():
 @app.route('/products')
 def products():
     page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('q', '')
+    category = request.args.get('category', '')
+    
+    query = Product.query
+    
+    if search_query:
+        query = query.filter(Product.title.ilike(f'%{search_query}%'))
+        
+    if category:
+        query = query.filter(Product.main_cat == category)
+        
+    # Fetch unique categories for filter
+    categories = [r[0] for r in db.session.query(Product.main_cat).distinct().order_by(Product.main_cat).all() if r[0]]
+    
     # Fetch paginated products from DB
-    products_pagination = Product.query.order_by(Product.popularity.desc()).paginate(page=page, per_page=20)
-    return render_template('products.html', products=products_pagination, title="Shop All")
+    products_pagination = query.order_by(Product.popularity.desc()).paginate(page=page, per_page=20)
+    
+    return render_template('products.html', products=products_pagination, title="Shop All",
+                           categories=categories, current_category=category, search_query=search_query)
 
 @app.route('/product/<asin>')
 def product_detail(asin):
