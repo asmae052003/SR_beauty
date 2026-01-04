@@ -41,20 +41,38 @@ class Recommender:
             return pickle.load(f)
 
     def get_product_details(self, asins):
-        """Retrieve product details from metadata DataFrame."""
-        clean_asins = [a for a in asins if a in self.meta_df.index]
-        products = self.meta_df.loc[clean_asins].reset_index().to_dict(orient='records')
+        """Retrieve product details from SQL Database (source of truth)."""
+        # Lazy import to avoid circular dependency
+        from models import Product
         
-        # Clean up image_urls
-        for p in products:
+        # Query DB for these ASINs
+        # We need to preserve order, so we fetch all then reorder
+        products_db = Product.query.filter(Product.asin.in_(asins)).all()
+        
+        # Create a map for fast lookup
+        product_map = {p.asin: p for p in products_db}
+        
+        final_products = []
+        for asin in asins:
+            p = product_map.get(asin)
+            if p:
+                # Convert to dict
+                p_dict = {
+                    'asin': p.asin,
+                    'title': p.title,
+                    'brand': p.brand,
+                    'main_cat': p.main_cat,
+                    'image_url': p.image_url,
+                    'price': None, # SQL model doesn't have price yet
+                    'avg_rating': p.avg_rating,
+                    'popularity': p.popularity
+                }
+                final_products.append(p_dict)
+                
+        # Clean up image_urls (legacy check if DB has weird formats)
+        for p in final_products:
             img = p.get('image_url')
-            if isinstance(img, (list, tuple, np.ndarray)):
-                if len(img) > 0:
-                    p['image_url'] = img[0]
-                else:
-                    p['image_url'] = None
-            # If it's a string looking like a list "['url']" (common in some csvs)
-            elif isinstance(img, str) and img.startswith("['") and img.endswith("']"):
+            if isinstance(img, str) and img.startswith("['") and img.endswith("']"):
                 try:
                     import ast
                     actual_list = ast.literal_eval(img)
@@ -62,7 +80,11 @@ class Recommender:
                         p['image_url'] = actual_list[0]
                 except:
                     pass
-        return products
+            # If no image, placeholder
+            if not p.get('image_url'):
+                p['image_url'] = "https://via.placeholder.com/300x300?text=No+Image"
+                
+        return final_products
 
     def recommend(self, username, recent_asins=None, k=10):
         """
