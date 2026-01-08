@@ -28,7 +28,7 @@ Ce projet est une application web e-commerce complète intégrant un système de
 
 ### Frontend
 -   **HTML/Jinja2:** Templates rendus côté serveur.
--   **Bootstrap (Probable):** Structure CSS pour le responsive design (déduit de la structure classique Flask).
+-   **Bootstrap :** Structure CSS pour le responsive design (déduit de la structure classique Flask).
 
 ## 3. Approche de Recommandation
 
